@@ -10,10 +10,15 @@ const config: Config = {
     extend: {
       colors: {
         gold: {
-          300: '#E8C97A',
-          400: '#D4A843',
-          500: '#C9A84C',
-          600: '#A8832A',
+          300: '#A78BFA',
+          400: '#7C3AED',
+          500: '#6D28D9',
+          600: '#4C1D95',
+        },
+        accent: {
+          300: '#93C5FD',
+          400: '#3B82F6',
+          500: '#2563EB',
         },
         charcoal: {
           800: '#1A1F2E',

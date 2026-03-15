@@ -40,12 +40,9 @@ export default function Home() {
           </span>
         </div>
 
-        <h1 className="text-5xl md:text-7xl font-bold leading-tight mb-6 tracking-tight">
-          Before you find{' '}
-          <span className="gold-gradient">the right woman</span>
-          <br />
-          find out if you&apos;re{' '}
-          <span className="gold-gradient">the right man.</span>
+        <h1 className="text-4xl md:text-6xl font-bold leading-tight mb-6 tracking-tight max-w-3xl mx-auto">
+          Before you find <span className="gold-gradient">the right woman,</span>{' '}
+          find out if you&apos;re <span className="gold-gradient">the right man.</span>
         </h1>
 
         <p className="text-white/60 text-xl max-w-2xl mx-auto leading-relaxed mb-10">
