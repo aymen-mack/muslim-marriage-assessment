@@ -9,8 +9,43 @@ interface FormData {
   age: string
   location: string
   email: string
+  countryCode: string
+  phone: string
   answers: Record<number, number>
 }
+
+const COUNTRY_CODES = [
+  { code: '+1', country: 'US/CA' },
+  { code: '+44', country: 'UK' },
+  { code: '+61', country: 'AU' },
+  { code: '+971', country: 'UAE' },
+  { code: '+966', country: 'SA' },
+  { code: '+974', country: 'QA' },
+  { code: '+965', country: 'KW' },
+  { code: '+973', country: 'BH' },
+  { code: '+968', country: 'OM' },
+  { code: '+20', country: 'EG' },
+  { code: '+212', country: 'MA' },
+  { code: '+213', country: 'DZ' },
+  { code: '+216', country: 'TN' },
+  { code: '+249', country: 'SD' },
+  { code: '+92', country: 'PK' },
+  { code: '+880', country: 'BD' },
+  { code: '+62', country: 'ID' },
+  { code: '+60', country: 'MY' },
+  { code: '+90', country: 'TR' },
+  { code: '+98', country: 'IR' },
+  { code: '+33', country: 'FR' },
+  { code: '+49', country: 'DE' },
+  { code: '+31', country: 'NL' },
+  { code: '+32', country: 'BE' },
+  { code: '+46', country: 'SE' },
+  { code: '+47', country: 'NO' },
+  { code: '+45', country: 'DK' },
+  { code: '+27', country: 'ZA' },
+  { code: '+234', country: 'NG' },
+  { code: '+254', country: 'KE' },
+]
 
 const QUESTIONS_PER_PILLAR = 6
 
@@ -24,6 +59,8 @@ export default function AssessmentPage() {
     age: '',
     location: '',
     email: '',
+    countryCode: '+1',
+    phone: '',
     answers: {},
   })
   const [error, setError] = useState('')
@@ -188,6 +225,30 @@ export default function AssessmentPage() {
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/20 focus:outline-none focus:border-gold-500/50 transition-colors"
                 />
                 <p className="text-white/30 text-xs mt-1.5">Your report will be sent here. No spam.</p>
+              </div>
+
+              <div>
+                <label className="block text-sm text-white/60 mb-1.5">Phone Number <span className="text-white/30">(optional)</span></label>
+                <div className="flex gap-2">
+                  <select
+                    value={formData.countryCode}
+                    onChange={e => setFormData(p => ({ ...p, countryCode: e.target.value }))}
+                    className="bg-white/5 border border-white/10 rounded-xl px-3 py-3 text-white focus:outline-none focus:border-gold-500/50 transition-colors text-sm"
+                  >
+                    {COUNTRY_CODES.map(({ code, country }) => (
+                      <option key={code} value={code} className="bg-charcoal-900 text-white">
+                        {code} {country}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="tel"
+                    value={formData.phone}
+                    onChange={e => setFormData(p => ({ ...p, phone: e.target.value }))}
+                    placeholder="7911 123456"
+                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/20 focus:outline-none focus:border-gold-500/50 transition-colors"
+                  />
+                </div>
               </div>
 
               {error && (
