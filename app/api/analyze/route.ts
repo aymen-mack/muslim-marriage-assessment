@@ -73,7 +73,7 @@ Tone: Like a trusted older brother who is direct, honest, and wants the best for
     // Save to Airtable
     try {
       const { countryCode, phone } = body
-      const airtableRes = await fetch(`https://api.airtable.com/v0/appQHsTZrThuvtw2Z/Assessment%20Takers`, {
+      const airtableRes = await fetch(`https://api.airtable.com/v0/appQHsTZrThuvtw2Z/tblnq7reGIWyB1Mlp`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${process.env.AIRTABLE_API_KEY}`,
