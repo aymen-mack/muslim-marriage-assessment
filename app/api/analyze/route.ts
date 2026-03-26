@@ -70,34 +70,24 @@ Tone: Like a trusted older brother who is direct, honest, and wants the best for
 
     const analysis = message.content[0].type === 'text' ? message.content[0].text : ''
 
-    // Save to Airtable
+    // Send to Make.com webhook
     try {
       const { countryCode, phone } = body
-      const airtableRes = await fetch(`https://api.airtable.com/v0/appQHsTZrThuvtw2Z/tblnq7reGIWyB1Mlp`, {
+      await fetch('https://hook.us2.make.com/s1ki1fiorqegj3nkwujs7zuyupy9trxt', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.AIRTABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          fields: {
-            Name: firstName,
-            Email: email,
-            Age: age,
-            Phone: phone ? `${countryCode}${phone}` : '',
-            Location: location,
-            Score: result.totalScore,
-            'Submitted date': new Date().toISOString(),
-          },
+          name: firstName,
+          email,
+          age,
+          phone: phone ? `${countryCode}${phone}` : '',
+          location,
+          score: result.totalScore,
+          submitted_date: new Date().toISOString(),
         }),
       })
-      if (!airtableRes.ok) {
-        const err = await airtableRes.json()
-        console.error('Airtable response error:', err)
-      }
-    } catch (airtableError) {
-      console.error('Airtable error:', airtableError)
-      // Don't fail the whole request if Airtable fails
+    } catch (webhookError) {
+      console.error('Webhook error:', webhookError)
     }
 
     // Send email
