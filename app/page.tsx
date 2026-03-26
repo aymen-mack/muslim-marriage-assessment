@@ -21,7 +21,7 @@ export default function Home() {
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-5 max-w-6xl mx-auto">
         <span className="text-gold-400 font-semibold tracking-wide text-sm uppercase">
-          Muslim Marriage Assessment
+          FaiyadFit
         </span>
         <Link
           href="/assessment"

@@ -205,7 +205,7 @@ function buildEmailHtml(
     <!-- Footer -->
     <div style="text-align: center; color: #374151; font-size: 13px; border-top: 1px solid #1F2937; padding-top: 24px;">
       <p>May Allah put barakah in your path.</p>
-      <p style="margin-top: 8px;">Muslim Marriage Assessment</p>
+      <p style="margin-top: 8px;">FaiyadFit</p>
     </div>
   </div>
 </body>
