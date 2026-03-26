@@ -73,7 +73,7 @@ Tone: Like a trusted older brother who is direct, honest, and wants the best for
     // Save to Airtable
     try {
       const { countryCode, phone } = body
-      await fetch(`https://api.airtable.com/v0/appQHsTZrThuvtw2Z/assessment%20takers`, {
+      const airtableRes = await fetch(`https://api.airtable.com/v0/appQHsTZrThuvtw2Z/Assessment%20Takers`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${process.env.AIRTABLE_API_KEY}`,
@@ -81,16 +81,20 @@ Tone: Like a trusted older brother who is direct, honest, and wants the best for
         },
         body: JSON.stringify({
           fields: {
-            name: firstName,
-            email,
-            phone: phone ? `${countryCode}${phone}` : '',
-            age,
-            location,
-            score: result.totalScore,
-            'submitted date': new Date().toISOString(),
+            Name: firstName,
+            Email: email,
+            Age: age,
+            Phone: phone ? `${countryCode}${phone}` : '',
+            Location: location,
+            Score: result.totalScore,
+            'Submitted date': new Date().toISOString(),
           },
         }),
       })
+      if (!airtableRes.ok) {
+        const err = await airtableRes.json()
+        console.error('Airtable response error:', err)
+      }
     } catch (airtableError) {
       console.error('Airtable error:', airtableError)
       // Don't fail the whole request if Airtable fails
