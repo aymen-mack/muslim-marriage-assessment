@@ -92,11 +92,11 @@ Tone: Like a trusted older brother who is direct, honest, and wants the best for
 
     // Send email
     let emailSent = false
-    const fromEmail = process.env.RESEND_FROM_EMAIL || 'results@muslimmarriageassessment.com'
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
 
     try {
       await resend.emails.send({
-        from: fromEmail,
+        from: `FaiyadFit <${fromEmail}>`,
         to: email,
         subject: `${firstName}, your Muslim Marriage Readiness Report is here`,
         html: buildEmailHtml(firstName, result, analysis),
