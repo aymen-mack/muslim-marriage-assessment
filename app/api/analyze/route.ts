@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { Resend } from 'resend'
 import { calculateScores, formatAnswersForPrompt } from '@/lib/scoring'
@@ -7,20 +7,20 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json()
-    const { firstName, age, location, email, answers } = body
+  const body = await req.json()
+  const { firstName, age, location, email, answers } = body
 
-    if (!firstName || !email || !answers) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
-    }
+  if (!firstName || !email || !answers) {
+    return new Response(JSON.stringify({ error: 'Missing required fields' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
 
-    // Calculate scores
-    const result = calculateScores(answers)
-    const formattedAnswers = formatAnswersForPrompt(answers)
+  const result = calculateScores(answers)
+  const formattedAnswers = formatAnswersForPrompt(answers)
 
-    // Build the Claude prompt
-    const prompt = `You are an Islamic marriage readiness coach giving an honest, direct, and encouraging report to a Muslim man who just completed a marriage readiness assessment.
+  const prompt = `You are an Islamic marriage readiness coach giving an honest, direct, and encouraging report to a Muslim man who just completed a marriage readiness assessment.
 
 PROFILE:
 - Name: ${firstName}
@@ -61,68 +61,91 @@ Give ${firstName} practical, specific advice on where and how to meet high-value
 
 Tone: Like a trusted older brother who is direct, honest, and wants the best for him. Islamic but not preachy. Encouraging but not coddling. Use his name occasionally. No filler. No fluff.`
 
-    // Call Claude
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 2000,
-      messages: [{ role: 'user', content: prompt }],
-    })
+  const encoder = new TextEncoder()
 
-    const analysis = message.content[0].type === 'text' ? message.content[0].text : ''
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        // Send metadata first so client has scores immediately
+        const meta = {
+          firstName,
+          totalScore: result.totalScore,
+          maxScore: result.maxScore,
+          percentage: result.percentage,
+          tier: result.tier,
+          tierLabel: result.tierLabel,
+          tierDescription: result.tierDescription,
+          pillarScores: result.pillarScores,
+        }
+        controller.enqueue(encoder.encode('__META__' + JSON.stringify(meta) + '\n'))
 
-    // Send to Make.com webhook
-    try {
-      const { countryCode, phone } = body
-      await fetch('https://hook.us2.make.com/s1ki1fiorqegj3nkwujs7zuyupy9trxt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: firstName,
-          email,
-          age,
-          phone: phone ? `${countryCode}${phone}` : '',
-          location,
-          score: result.totalScore,
-          submitted_date: new Date().toISOString(),
-        }),
-      })
-    } catch (webhookError) {
-      console.error('Webhook error:', webhookError)
-    }
+        // Stream Claude response — keeps connection alive, no timeout
+        let fullAnalysis = ''
+        const claudeStream = anthropic.messages.stream({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 2000,
+          messages: [{ role: 'user', content: prompt }],
+        })
 
-    // Send email
-    let emailSent = false
-    const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
+        for await (const chunk of claudeStream) {
+          if (
+            chunk.type === 'content_block_delta' &&
+            chunk.delta.type === 'text_delta'
+          ) {
+            const text = chunk.delta.text
+            fullAnalysis += text
+            controller.enqueue(encoder.encode(text))
+          }
+        }
 
-    try {
-      await resend.emails.send({
-        from: `FaiyadFit <${fromEmail}>`,
-        to: email,
-        subject: `${firstName}, your Muslim Marriage Readiness Report is here`,
-        html: buildEmailHtml(firstName, result, analysis),
-      })
-      emailSent = true
-    } catch (emailError) {
-      console.error('Email failed:', emailError)
-      // Don't fail the whole request if email fails
-    }
+        // Fire webhook (no await — best effort)
+        const { countryCode, phone } = body
+        fetch('https://hook.us2.make.com/s1ki1fiorqegj3nkwujs7zuyupy9trxt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: firstName,
+            email,
+            age,
+            phone: phone ? `${countryCode}${phone}` : '',
+            location,
+            score: result.totalScore,
+            submitted_date: new Date().toISOString(),
+          }),
+        }).catch((e) => console.error('Webhook error:', e))
 
-    return NextResponse.json({
-      firstName,
-      totalScore: result.totalScore,
-      maxScore: result.maxScore,
-      percentage: result.percentage,
-      tier: result.tier,
-      tierLabel: result.tierLabel,
-      tierDescription: result.tierDescription,
-      pillarScores: result.pillarScores,
-      analysis,
-      emailSent,
-    })
-  } catch (error) {
-    console.error('Analysis error:', error)
-    return NextResponse.json({ error: 'Analysis failed' }, { status: 500 })
-  }
+        // Send email
+        let emailSent = false
+        const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
+        try {
+          await resend.emails.send({
+            from: `FaiyadFit <${fromEmail}>`,
+            to: email,
+            subject: `${firstName}, your Muslim Marriage Readiness Report is here`,
+            html: buildEmailHtml(firstName, result, fullAnalysis),
+          })
+          emailSent = true
+        } catch (emailError) {
+          console.error('Email failed:', emailError)
+        }
+
+        // Signal completion
+        controller.enqueue(encoder.encode('\n__DONE__' + JSON.stringify({ emailSent }) + '\n'))
+        controller.close()
+      } catch (error) {
+        console.error('Analysis error:', error)
+        controller.enqueue(encoder.encode('\n__ERROR__' + JSON.stringify({ error: 'Analysis failed' }) + '\n'))
+        controller.close()
+      }
+    },
+  })
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'X-Accel-Buffering': 'no',
+    },
+  })
 }
 
 function buildEmailHtml(

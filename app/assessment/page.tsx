@@ -126,13 +126,43 @@ export default function AssessmentPage() {
         body: JSON.stringify({ ...formData, answers }),
       })
 
-      const data = await res.json()
-
-      if (!res.ok) {
-        throw new Error(data?.error || `Server error ${res.status}`)
+      if (!res.ok || !res.body) {
+        throw new Error(`Server error ${res.status}`)
       }
 
-      sessionStorage.setItem('assessmentResult', JSON.stringify(data))
+      // Read the streaming response
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+      }
+
+      // Check for error signal
+      if (buffer.includes('__ERROR__')) {
+        const match = buffer.match(/__ERROR__(.+?)(\n|$)/)
+        const msg = match ? JSON.parse(match[1]).error : 'Analysis failed'
+        throw new Error(msg)
+      }
+
+      // Extract metadata (first line)
+      const metaMatch = buffer.match(/__META__(.+?)\n/)
+      if (!metaMatch) throw new Error('No response received')
+      const meta = JSON.parse(metaMatch[1])
+
+      // Extract done signal (emailSent flag)
+      const doneMatch = buffer.match(/\n__DONE__(.+?)(\n|$)/)
+      const emailSent = doneMatch ? JSON.parse(doneMatch[1]).emailSent : false
+
+      // Everything between META line and DONE line is the analysis
+      const metaLineEnd = buffer.indexOf('\n') + 1
+      const doneStart = buffer.lastIndexOf('\n__DONE__')
+      const analysis = (doneStart > 0 ? buffer.slice(metaLineEnd, doneStart) : buffer.slice(metaLineEnd)).trim()
+
+      sessionStorage.setItem('assessmentResult', JSON.stringify({ ...meta, analysis, emailSent }))
       router.push('/results')
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Something went wrong.'
